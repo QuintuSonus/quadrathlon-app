@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/quadrathlon-app/static/css/main.45993381.css",
+    "main.js": "/quadrathlon-app/static/js/main.8160c804.js",
+    "index.html": "/quadrathlon-app/index.html",
+    "main.45993381.css.map": "/quadrathlon-app/static/css/main.45993381.css.map",
+    "main.8160c804.js.map": "/quadrathlon-app/static/js/main.8160c804.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.45993381.css",
+    "static/js/main.8160c804.js"
+  ]
+}
