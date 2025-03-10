@@ -6,6 +6,7 @@ import ScoringScreen from './components/scoring/ScoringScreen';
 import SessionCompleteScreen from './components/results/SessionCompleteScreen';
 import FinalStandingsReveal from './components/results/FinalStandingsReveal';
 import NavigationBar from './components/core/NavigationBar';
+import MobileResponsiveWrapper from './components/core/MobileResponsiveWrapper';
 import audioService from './services/AudioService';
 import './styles/index.css';
 
@@ -16,6 +17,20 @@ const AppContent = () => {
   // Preload audio when the app first loads
   useEffect(() => {
     audioService.preloadSounds();
+  }, []);
+
+  // Detect mobile device
+  useEffect(() => {
+    const isMobile = window.innerWidth <= 768;
+    document.body.classList.toggle('mobile-device', isMobile);
+    
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768;
+      document.body.classList.toggle('mobile-device', isMobile);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
   
   // Render different screens based on the current UI state
@@ -48,7 +63,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <StateProvider>
-      <AppContent />
+      <MobileResponsiveWrapper>
+        <AppContent />
+      </MobileResponsiveWrapper>
     </StateProvider>
   );
 };

@@ -10,6 +10,17 @@ const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDuratio
   const lastRunningState = useRef(isRunning);
   const hasUpdatedRef = useRef(false);
   const lastSessionDurationRef = useRef(sessionDuration);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Update time when sessionDuration changes - but only if it ACTUALLY changes
   useEffect(() => {
@@ -189,12 +200,12 @@ const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDuratio
   };
   
   return (
-    <div className="scoring-tool countdown-timer">
+    <div className={`scoring-tool countdown-timer ${isMobile ? 'mobile-countdown' : ''}`}>
       <div className="tool-header">
         <span className="tool-title">Countdown Timer</span>
       </div>
       
-      <div className="preset-buttons">
+      <div className={`preset-buttons ${isMobile ? 'mobile-presets' : ''}`}>
         {presets.map(preset => (
           <button
             key={preset.label}
@@ -206,7 +217,13 @@ const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDuratio
         ))}
       </div>
       
-      <div className="fine-adjustment">
+      <div className={`timer-display ${isRunning ? 'running' : ''}`}>
+        <div className="score-display">
+          {formatTime()}
+        </div>
+      </div>
+      
+      <div className={`fine-adjustment ${isMobile ? 'mobile-adjustment' : ''}`}>
         <button 
           className="btn adjust-btn" 
           onClick={handleDecreaseTime}
@@ -214,9 +231,6 @@ const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDuratio
         >
           -30s
         </button>
-        <div className="score-display">
-          {formatTime()}
-        </div>
         <button 
           className="btn adjust-btn" 
           onClick={handleIncreaseTime}
@@ -226,34 +240,73 @@ const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDuratio
         </button>
       </div>
       
-      <div className="tool-controls">
+      <div className={`tool-controls ${isMobile ? 'mobile-controls' : ''}`}>
         {!isRunning ? (
-          <button className="btn" onClick={handleStart}>Start</button>
+          <button className={`btn ${isMobile ? 'btn-large' : ''}`} onClick={handleStart}>Start</button>
         ) : (
-          <button className="btn" onClick={handlePause}>Pause</button>
+          <button className={`btn ${isMobile ? 'btn-large' : ''}`} onClick={handlePause}>Pause</button>
         )}
         <button className="btn" onClick={handleReset}>Reset</button>
         <button className="btn btn-primary" onClick={handleSave}>Save</button>
       </div>
       
       <style jsx>{`
-        .fine-adjustment {
-          display: flex;
-          justify-content: center;
-          align-items: center;
+        .mobile-countdown {
+          padding: 15px;
+        }
+        
+        .mobile-presets {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          margin: 12px 0;
+        }
+        
+        .mobile-presets .preset-button {
+          padding: 10px 8px;
+          min-height: 44px; /* Better touch target */
+          font-size: 1rem;
+        }
+        
+        .timer-display {
+          border: 2px solid #eee;
+          border-radius: 8px;
+          margin: 15px 0;
+          padding: 10px 0;
+          background-color: #f9f9f9;
+          transition: all 0.3s ease;
+        }
+        
+        .timer-display.running {
+          border-color: var(--primary-color);
+          background-color: rgba(46, 125, 247, 0.05);
+        }
+        
+        .mobile-adjustment {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           gap: 10px;
           margin: 15px 0;
         }
         
-        .adjust-btn {
-          font-size: 0.9rem;
-          padding: 5px 10px;
-          background-color: #f0f0f0;
+        .mobile-adjustment .adjust-btn {
+          min-height: 44px;
+          font-size: 1rem;
         }
         
-        .adjust-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
+        .mobile-controls {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+          gap: 8px;
+        }
+        
+        .mobile-controls .btn {
+          min-height: 44px;
+          font-size: 1rem;
+        }
+        
+        .btn-large {
+          grid-column: span 2;
         }
       `}</style>
     </div>

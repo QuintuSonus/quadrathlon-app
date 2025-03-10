@@ -10,6 +10,17 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
   const [winningTeamIndex, setWinningTeamIndex] = useState(null);
   const [showRankingModal, setShowRankingModal] = useState(false);
   const [allPlayers, setAllPlayers] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // When a game is selected, extract all players for the game
   useEffect(() => {
@@ -93,46 +104,6 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
     setWinningTeamIndex(null);
   };
   
-  // Get player scores for a tournament game
-  const getTournamentPlayerScores = (player) => {
-    if (!selectedGame || !selectedGame.bracket) return {};
-    
-    // For tournament games, we need to look at the match results
-    // This is a simplified version - in a real app, you'd have more detailed scoring
-    const result = {
-      matches: 0,
-      wins: 0
-    };
-    
-    // Check semifinals
-    selectedGame.bracket.semifinals.forEach(match => {
-      if (match.players && match.players.includes(player)) {
-        result.matches++;
-        if (match.winner === player) {
-          result.wins++;
-        }
-      }
-    });
-    
-    // Check final
-    if (selectedGame.bracket.final.players && selectedGame.bracket.final.players.includes(player)) {
-      result.matches++;
-      if (selectedGame.bracket.final.winner === player) {
-        result.wins++;
-      }
-    }
-    
-    // Check small final
-    if (selectedGame.bracket.smallFinal.players && selectedGame.bracket.smallFinal.players.includes(player)) {
-      result.matches++;
-      if (selectedGame.bracket.smallFinal.winner === player) {
-        result.wins++;
-      }
-    }
-    
-    return result;
-  };
-  
   // Calculate points based on rankings
   const calculatePoints = (game, rankings) => {
     const points = {};
@@ -160,28 +131,6 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
     }
     
     return points;
-  };
-  
-  // Update tournament bracket based on new rankings
-  const updateTournamentBracket = (bracket, rankings) => {
-    if (!bracket || rankings.length !== 4) return bracket;
-    
-    const updatedBracket = { ...bracket };
-    
-    // Update the final winner to be the 1st ranked player
-    if (updatedBracket.final && updatedBracket.final.players) {
-      updatedBracket.final.winner = rankings[0];
-    }
-    
-    // Update the small final winner to be the 3rd ranked player
-    if (updatedBracket.smallFinal && updatedBracket.smallFinal.players) {
-      updatedBracket.smallFinal.winner = rankings[2];
-    }
-    
-    // Store the rankings
-    updatedBracket.rankings = rankings;
-    
-    return updatedBracket;
   };
   
   // Save updated rankings
@@ -318,7 +267,29 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
     return score.toString();
   };
   
-  // Render Individual/Tournament Game Ranking Editor
+  // Update tournament bracket based on new rankings
+  const updateTournamentBracket = (bracket, rankings) => {
+    if (!bracket || rankings.length !== 4) return bracket;
+    
+    const updatedBracket = { ...bracket };
+    
+    // Update the final winner to be the 1st ranked player
+    if (updatedBracket.final && updatedBracket.final.players) {
+      updatedBracket.final.winner = rankings[0];
+    }
+    
+    // Update the small final winner to be the 3rd ranked player
+    if (updatedBracket.smallFinal && updatedBracket.smallFinal.players) {
+      updatedBracket.smallFinal.winner = rankings[2];
+    }
+    
+    // Store the rankings
+    updatedBracket.rankings = rankings;
+    
+    return updatedBracket;
+  };
+  
+  // Render Individual/Tournament Game Ranking Editor with mobile optimizations
   const renderIndividualOrTournamentRankingEditor = () => {
     if (!selectedGame) return null;
     
@@ -339,24 +310,26 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
         
         <div className="player-scores-recap">
           <h3>Player Scores:</h3>
-          <div className="player-scores-grid">
-            <div className="player-score-header">
-              <div>Player</div>
-              {selectedGame.type === 'tournament' ? (
-                <>
-                  <div className="score-header">Matches</div>
-                  <div className="score-header">Wins</div>
-                </>
-              ) : (
-                selectedGame.scoringMethods && selectedGame.scoringMethods.map(tool => (
-                  <div key={tool} className="score-header">
-                    {tool === 'stopwatch' ? 'Stopwatch' : 
-                     tool === 'countdown' ? 'Countdown' : 
-                     tool === 'counter' ? 'Counter' : 'Manual'}
-                  </div>
-                ))
-              )}
-            </div>
+          <div className={`player-scores-grid ${isMobile ? 'mobile-grid' : ''}`}>
+            {!isMobile && (
+              <div className="player-score-header">
+                <div>Player</div>
+                {selectedGame.type === 'tournament' ? (
+                  <>
+                    <div className="score-header">Matches</div>
+                    <div className="score-header">Wins</div>
+                  </>
+                ) : (
+                  selectedGame.scoringMethods && selectedGame.scoringMethods.map(tool => (
+                    <div key={tool} className="score-header">
+                      {tool === 'stopwatch' ? 'Stopwatch' : 
+                       tool === 'countdown' ? 'Countdown' : 
+                       tool === 'counter' ? 'Counter' : 'Manual'}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
             
             {allPlayers.map(player => {
               // Get score data based on game type
@@ -388,14 +361,26 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
                   
                   {selectedGame.type === 'tournament' ? (
                     <>
+                      {isMobile && <div className="score-label">Matches</div>}
                       <div className="player-score-value">{scoreData.matches || 0}</div>
+                      
+                      {isMobile && <div className="score-label">Wins</div>}
                       <div className="player-score-value">{scoreData.wins || 0}</div>
                     </>
                   ) : (
                     selectedGame.scoringMethods && selectedGame.scoringMethods.map(tool => (
-                      <div key={tool} className="player-score-value">
-                        {formatScore(scoreData[tool], tool)}
-                      </div>
+                      <React.Fragment key={tool}>
+                        {isMobile && (
+                          <div className="score-label">
+                            {tool === 'stopwatch' ? 'Stopwatch' : 
+                             tool === 'countdown' ? 'Countdown' : 
+                             tool === 'counter' ? 'Counter' : 'Manual'}
+                          </div>
+                        )}
+                        <div className="player-score-value">
+                          {formatScore(scoreData[tool], tool)}
+                        </div>
+                      </React.Fragment>
                     ))
                   )}
                 </div>
@@ -407,7 +392,46 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
     );
   };
   
-  // Render Team Game Ranking Editor
+  // Get player scores for a tournament game
+  const getTournamentPlayerScores = (player) => {
+    if (!selectedGame || !selectedGame.bracket) return {};
+    
+    // For tournament games, we need to look at the match results
+    const result = {
+      matches: 0,
+      wins: 0
+    };
+    
+    // Check semifinals
+    selectedGame.bracket.semifinals.forEach(match => {
+      if (match.players && match.players.includes(player)) {
+        result.matches++;
+        if (match.winner === player) {
+          result.wins++;
+        }
+      }
+    });
+    
+    // Check final
+    if (selectedGame.bracket.final.players && selectedGame.bracket.final.players.includes(player)) {
+      result.matches++;
+      if (selectedGame.bracket.final.winner === player) {
+        result.wins++;
+      }
+    }
+    
+    // Check small final
+    if (selectedGame.bracket.smallFinal.players && selectedGame.bracket.smallFinal.players.includes(player)) {
+      result.matches++;
+      if (selectedGame.bracket.smallFinal.winner === player) {
+        result.wins++;
+      }
+    }
+    
+    return result;
+  };
+  
+  // Render Team Game Ranking Editor with mobile optimizations
   const renderTeamRankingEditor = () => {
     if (!selectedGame || !selectedGame.teams || selectedGame.teams.length !== 2) return null;
     
@@ -420,7 +444,7 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
         </div>
         
         <div className="teams-selection">
-          <div className="teams-container selectable">
+          <div className={`teams-container selectable ${isMobile ? 'mobile-teams' : ''}`}>
             {teams.map((team, index) => (
               <div 
                 key={index} 
@@ -444,17 +468,19 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
         <div className="team-scores-recap">
           <h3>Team Scores:</h3>
           {selectedGame.scores && Object.keys(selectedGame.scores).length > 0 ? (
-            <div className="team-scores-grid">
-              <div className="score-header">
-                <div>Team</div>
-                {selectedGame.scoringMethods && selectedGame.scoringMethods.map(tool => (
-                  <div key={tool} className="score-header">
-                    {tool === 'stopwatch' ? 'Stopwatch' : 
-                     tool === 'countdown' ? 'Countdown' : 
-                     tool === 'counter' ? 'Counter' : 'Manual'}
-                  </div>
-                ))}
-              </div>
+            <div className={`team-scores-grid ${isMobile ? 'mobile-grid' : ''}`}>
+              {!isMobile && (
+                <div className="score-header">
+                  <div>Team</div>
+                  {selectedGame.scoringMethods && selectedGame.scoringMethods.map(tool => (
+                    <div key={tool} className="score-header">
+                      {tool === 'stopwatch' ? 'Stopwatch' : 
+                       tool === 'countdown' ? 'Countdown' : 
+                       tool === 'counter' ? 'Counter' : 'Manual'}
+                    </div>
+                  ))}
+                </div>
+              )}
               
               {teams.map((team, index) => {
                 // Get team scores
@@ -465,9 +491,18 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
                     <div className="team-name">Team {index + 1}</div>
                     
                     {selectedGame.scoringMethods && selectedGame.scoringMethods.map(tool => (
-                      <div key={tool} className="team-score-value">
-                        {formatScore(teamScore[tool], tool)}
-                      </div>
+                      <React.Fragment key={tool}>
+                        {isMobile && (
+                          <div className="score-label">
+                            {tool === 'stopwatch' ? 'Stopwatch' : 
+                             tool === 'countdown' ? 'Countdown' : 
+                             tool === 'counter' ? 'Counter' : 'Manual'}
+                          </div>
+                        )}
+                        <div className="team-score-value">
+                          {formatScore(teamScore[tool], tool)}
+                        </div>
+                      </React.Fragment>
                     ))}
                   </div>
                 );
@@ -503,10 +538,10 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
         )}
       </div>
       
-      {/* Game History Ranking Modal */}
+      {/* Game History Ranking Modal with mobile optimizations */}
       {showRankingModal && selectedGame && (
         <div className="modal-overlay">
-          <div className="ranking-modal">
+          <div className={`ranking-modal ${isMobile ? 'mobile-modal' : ''}`}>
             <div className="modal-header">
               <h2>{selectedGame.name} - Final Rankings</h2>
               <button className="modal-close" onClick={handleCancelRanking}>×</button>
@@ -541,6 +576,79 @@ const GameHistoryList = ({ games, currentGameIndex }) => {
           </div>
         </div>
       )}
+      
+      {/* Mobile specific styles */}
+      <style jsx>{`
+        .mobile-grid {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .mobile-grid .player-score-row,
+        .mobile-grid .team-score-row {
+          margin-bottom: 15px;
+          padding: 12px;
+          background-color: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .mobile-grid .player-name,
+        .mobile-grid .team-name {
+          font-size: 1.1rem;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #eee;
+        }
+        
+        .mobile-grid .score-label {
+          font-weight: 500;
+          font-size: 0.9rem;
+          color: #666;
+          margin-top: 8px;
+        }
+        
+        .mobile-grid .player-score-value,
+        .mobile-grid .team-score-value {
+          font-size: 1.1rem;
+          margin-left: 10px;
+          font-family: monospace;
+        }
+        
+        .mobile-teams {
+          flex-direction: column;
+        }
+        
+        .mobile-teams .team-card {
+          width: 100%;
+          max-width: 100%;
+          margin-bottom: 10px;
+        }
+        
+        .mobile-modal {
+          height: 100vh;
+          width: 100%;
+          border-radius: 0;
+          margin: 0;
+        }
+        
+        .mobile-modal .modal-body {
+          padding: 15px;
+          overflow-y: auto;
+        }
+        
+        .mobile-modal .modal-footer {
+          padding: 10px 15px;
+          flex-direction: column;
+          gap: 10px;
+        }
+        
+        .mobile-modal .modal-footer .btn {
+          width: 100%;
+        }
+      `}</style>
     </>
   );
 };
