@@ -1,0 +1,151 @@
+Quadrathlon Gaming Night App - Project Context Summary
+Overview
+The Quadrathlon Gaming Night app is a web application built for four friends (David, Manu, Antoine, and Quentin) to manage their competitive gaming sessions. The app facilitates player selection, scoring, and rankings across multiple games while hiding the running score until a final reveal.
+Core Features
+
+Setup
+
+Choose number of games (4, 8, 12, 16, or 20)
+Configure the four players who will participate
+Option to continue an existing session
+
+
+Game Types
+
+Individual: Each player competes individually
+Cooperative: Players form two 2v2 teams
+1v1 Tournament: Bracket-style tournament with semifinals, final, and 3rd place match
+2v2: Two teams compete against each other
+
+
+Randomization
+
+Random player selection for individual games
+Random team generation for team-based games
+Random tournament bracket generation
+
+
+Scoring Methods
+
+Stopwatch: Track time with start/stop functionality
+Countdown: Preset timer with audio alerts
+Counter: Simple increment/decrement counter
+Manual: Direct entry of scores
+Multiple methods can be used simultaneously
+
+
+Points System
+
+Individual/Tournament: 1st (4000 pts), 2nd (3000 pts), 3rd (2000 pts), 4th (1000 pts)
+Team Games: Winners (4000 pts each), Losers (2000 pts each)
+
+
+Game History
+
+List of played games with results
+Ability to edit rankings for any completed game
+Support for editing all game types (individual, cooperative, tournament, 2v2)
+
+
+Results
+
+Option to add more games before viewing final results
+Animated final standings reveal (4th to 1st place)
+Session summary and option to start a new session
+
+
+
+Technical Architecture
+
+Framework: React with Context API for state management
+Data Persistence: Local storage
+State Structure:
+
+Session configuration and state
+Games array with game details, scores, and rankings
+Player scores (hidden until reveal)
+UI state (current screen, active tools, etc.)
+
+
+Core Components:
+
+Setup Screen
+Game Screen (with type-specific components)
+Scoring Tools
+Results Screen
+Game History
+
+
+
+Current Status and Improvements Made
+We've successfully implemented:
+
+Improved Player Selection Flow:
+
+Single player selection and scoring at a time
+Reset scoring methods for each new player
+
+
+Streamlined Scoring:
+
+Automatic score tracking without needing manual saves
+Fixed maximum update depth issues with timer components
+Optimized update handling for all scoring methods
+
+
+Game History Editing:
+
+Modal for editing rankings for all game types
+Individual/Tournament: Tap-to-rank interface
+Team Games: Team selection interface
+
+
+Tournament Improvements:
+
+Fixed issues with matches completed out of order
+Added proper progress tracking and next game button
+Support for editing tournament rankings after completion
+
+
+UI/UX Enhancements:
+
+Better visual feedback for selections
+Score displays for informed ranking decisions
+Responsive design for all screens
+
+
+
+Next Steps / Potential Improvements
+Areas that could be enhanced in future iterations:
+
+Additional Features:
+
+Dark/light theme support
+More sophisticated animations
+Sound effects for more interactions
+Session statistics across multiple game nights
+
+
+Performance Optimizations:
+
+Component lazy loading
+Memoization for complex renders
+Memory usage optimization for long sessions
+
+
+UX Refinements:
+
+More visual polish
+Additional accessibility features
+Input validation and error prevention
+
+
+Additional Game Types:
+
+Support for different tournament formats
+Custom point allocations
+Special game modes
+
+
+
+This summary should provide sufficient context to continue development in a new conversation without losing the conceptual understanding of the project.
