@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../../context/StateContext';
 import { ACTION_TYPES } from '../../context/StateReducer';
-import Button from '../core/Button';
+import { Button, Card, Confetti } from '../core/UIComponents';
 import AudioService from '../../services/AudioService';
 import GameHistoryList from '../game/GameHistoryList';
 
@@ -20,6 +20,7 @@ const FinalStandingsReveal = () => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [maxScore, setMaxScore] = useState(0);
   const [maxGameCount, setMaxGameCount] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
   const animationTimerRef = useRef(null);
   const svgRef = useRef(null);
   const svgWidth = 800;
@@ -116,6 +117,8 @@ const FinalStandingsReveal = () => {
       // All players animated, reveal names
       setTimeout(() => {
         setShowPlayerNames(true);
+        // Show confetti for winner celebration
+        setShowConfetti(true);
         // Play winner sound
         AudioService.playRankingSound(1);
       }, 1000);
@@ -207,10 +210,10 @@ const FinalStandingsReveal = () => {
   const getPlayerColor = (player) => {
     // Original player colors (only show these after the reveal)
     const playerColors = {
-      'David': '#4285F4',    // Blue
-      'Manu': '#EA4335',     // Red
-      'Antoine': '#FBBC05',  // Yellow
-      'Quentin': '#34A853'   // Green
+      'David': 'var(--player1-color)',
+      'Manu': 'var(--player2-color)',
+      'Antoine': 'var(--player3-color)',
+      'Quentin': 'var(--player4-color)'
     };
     
     // Anonymous colors for the animation phase (different from player colors to avoid spoilers)
@@ -349,9 +352,20 @@ const FinalStandingsReveal = () => {
 
   // Render the add games panel
   const renderAddGamesPanel = () => (
-    <div className="add-games-panel">
-      <h3>Add More Games</h3>
-      
+    <Card
+      className="add-games-panel"
+      title="Add More Games"
+      footer={
+        <div className="panel-actions">
+          <Button onClick={handleAddGames} primary>
+            Add Games & Continue
+          </Button>
+          <Button onClick={toggleAddGames}>
+            Cancel
+          </Button>
+        </div>
+      }
+    >
       <div className="games-selector">
         <div className="game-count-selector session-extension">
           <div className="selector-options">
@@ -361,6 +375,7 @@ const FinalStandingsReveal = () => {
                 className={`selector-option ${selectedAdditionalGames === count ? 'selected' : ''}`}
                 onClick={() => setSelectedAdditionalGames(count)}
               >
+                <span className="option-icon">{count === 4 ? '🎲' : count === 8 ? '🎯' : '🎮'}</span>
                 {count} Games
               </button>
             ))}
@@ -368,20 +383,12 @@ const FinalStandingsReveal = () => {
         </div>
         
         <div className="extension-summary">
-          <p>Current games: {state.games.length}</p>
-          <p>Additional games: {selectedAdditionalGames}</p>
-          <p className="extension-total">New total: {state.games.length + selectedAdditionalGames}</p>
+          <p>Current games: <strong>{state.games.length}</strong></p>
+          <p>Additional games: <strong>{selectedAdditionalGames}</strong></p>
+          <p className="extension-total">New total: <strong>{state.games.length + selectedAdditionalGames}</strong></p>
         </div>
-        
-        <Button onClick={handleAddGames} primary>
-          Add Games & Continue
-        </Button>
-        
-        <Button onClick={toggleAddGames} style={{ marginTop: '10px' }}>
-          Cancel
-        </Button>
       </div>
-    </div>
+    </Card>
   );
 
   // Render score display for a player
@@ -407,19 +414,26 @@ const FinalStandingsReveal = () => {
           transition: transitionStyle
         }}
       >
-        <div className="player-score-name">
-          <span 
-            className="player-color-indicator"
+        <div className="player-info">
+          <div 
+            className="player-badge"
             style={{ 
               backgroundColor: color,
               transition: transitionStyle
             }}
-          ></span>
-          <span className="player-name">{displayName}</span>
-          {showPlayerNames && <span className="player-rank">{rank}</span>}
+          >
+            {showPlayerNames ? player.charAt(0) : (playerIndex + 1)}
+          </div>
+          <div className="player-details">
+            <span className="player-name">{displayName}</span>
+            {showPlayerNames && <span className="player-rank">{rank}</span>}
+          </div>
         </div>
-        <div className="player-score-value" style={{ color: color, transition: transitionStyle }}>
-          {isRevealed ? formatScore(score) : '?'} pts
+        <div className="score-container" style={{ transition: transitionStyle }}>
+          <div className="player-score-value" style={{ color: color, transition: transitionStyle }}>
+            {isRevealed ? formatScore(score) : '?'} 
+          </div>
+          <div className="score-label">points</div>
         </div>
       </div>
     );
@@ -427,191 +441,234 @@ const FinalStandingsReveal = () => {
 
   return (
     <div className="final-standings">
-      <h1>Final Standings</h1>
+      <h1 className="results-title">Final Standings</h1>
+      
+      {showConfetti && <Confetti active={true} />}
       
       {showAddGames ? (
         renderAddGamesPanel()
       ) : revealState === 'initial' ? (
         <div className="reveal-intro">
-          <p>The moment of truth has arrived! See who won the Quadrathlon!</p>
-          
-          <div className="game-history-section">
-            <h3>Game History</h3>
-            <p>Review and edit game results before the final reveal:</p>
-            <GameHistoryList
-              games={state.games}
-              currentGameIndex={state.games.length - 1}
-            />
-          </div>
-          
-          <div className="reveal-options">
-            <Button onClick={toggleAddGames}>
-              Add More Games First
-            </Button>
+          <Card className="intro-card">
+            <p className="intro-text">The moment of truth has arrived! See who won the Quadrathlon!</p>
             
-            <Button onClick={startReveal} primary large>
-              Reveal Final Results
-            </Button>
-          </div>
+            <div className="game-history-section">
+              <h3>Game History</h3>
+              <p>Review and edit game results before the final reveal:</p>
+              <GameHistoryList
+                games={state.games}
+                currentGameIndex={state.games.length - 1}
+              />
+            </div>
+            
+            <div className="reveal-options">
+              <Button onClick={toggleAddGames}>
+                <span className="btn-icon">➕</span>
+                Add More Games First
+              </Button>
+              
+              <Button onClick={startReveal} primary large>
+                <span className="btn-icon">🎭</span>
+                Reveal Final Results
+              </Button>
+            </div>
+          </Card>
         </div>
       ) : (
         <div className="results-reveal-container">
-          <div className="score-graph-container">
-            <svg 
-              ref={svgRef}
-              width="100%" 
-              height={svgHeight} 
-              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-              preserveAspectRatio="xMidYMid meet"
-              className="score-graph-svg"
-            >
-              {/* Chart Background */}
-              <rect 
-                x={marginLeft} 
-                y={marginTop} 
-                width={chartWidth} 
-                height={chartHeight} 
-                fill="#f9f9f9" 
-                stroke="#ddd"
-              />
-              
-              {/* Y-Axis */}
-              <line 
-                x1={marginLeft} 
-                y1={marginTop} 
-                x2={marginLeft} 
-                y2={svgHeight - marginBottom} 
-                stroke="#666" 
-                strokeWidth="1"
-              />
-              <text 
-                x={15} 
-                y={svgHeight / 2} 
-                transform={`rotate(-90, 15, ${svgHeight / 2})`}
-                textAnchor="middle"
-                fontSize="14"
-                fill="#666"
+          <Card className="results-card">
+            <div className="score-graph-container">
+              <h3 className="graph-title">Score Progression</h3>
+              <svg 
+                ref={svgRef}
+                width="100%" 
+                height={svgHeight} 
+                viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                preserveAspectRatio="xMidYMid meet"
+                className="score-graph-svg"
               >
-                Points
-              </text>
-              {generateYAxisLabels()}
-              
-              {/* X-Axis */}
-              <line 
-                x1={marginLeft} 
-                y1={svgHeight - marginBottom} 
-                x2={svgWidth - marginRight} 
-                y2={svgHeight - marginBottom} 
-                stroke="#666" 
-                strokeWidth="1"
-              />
-              <text 
-                x={svgWidth / 2} 
-                y={svgHeight - 5} 
-                textAnchor="middle"
-                fontSize="14"
-                fill="#666"
-              >
-                Games
-              </text>
-              {generateXAxisLabels()}
-              
-              {/* Player Score Lines */}
-              {randomizedPlayers.map((player, index) => {
-                const isVisible = visiblePlayers.includes(player);
-                if (!isVisible) return null;
+                {/* Chart Background */}
+                <rect 
+                  x={marginLeft} 
+                  y={marginTop} 
+                  width={chartWidth} 
+                  height={chartHeight} 
+                  fill="#f9f9f9" 
+                  stroke="#ddd"
+                />
                 
-                const playerPath = generatePlayerPath(player);
-                const isAnimating = index === currentPlayerIndex;
-                const pathLength = 1000; // Approximate path length
+                {/* Y-Axis */}
+                <line 
+                  x1={marginLeft} 
+                  y1={marginTop} 
+                  x2={marginLeft} 
+                  y2={svgHeight - marginBottom} 
+                  stroke="#666" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={15} 
+                  y={svgHeight / 2} 
+                  transform={`rotate(-90, 15, ${svgHeight / 2})`}
+                  textAnchor="middle"
+                  fontSize="14"
+                  fill="#666"
+                >
+                  Points
+                </text>
+                {generateYAxisLabels()}
                 
-                // Calculate how much of the path to show based on animation progress
-                const dashOffset = isAnimating ? 
-                  pathLength * (1 - animationProgress / 100) : 0;
+                {/* X-Axis */}
+                <line 
+                  x1={marginLeft} 
+                  y1={svgHeight - marginBottom} 
+                  x2={svgWidth - marginRight} 
+                  y2={svgHeight - marginBottom} 
+                  stroke="#666" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={svgWidth / 2} 
+                  y={svgHeight - 5} 
+                  textAnchor="middle"
+                  fontSize="14"
+                  fill="#666"
+                >
+                  Games
+                </text>
+                {generateXAxisLabels()}
                 
-                return (
-                  <g key={player}>
-                    <path
-                      id={`path-${player}`}
-                      d={playerPath}
-                      fill="none"
-                      stroke={getPlayerColor(player)}
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{
-                        strokeDasharray: isAnimating ? pathLength : 'none',
-                        strokeDashoffset: dashOffset,
-                        opacity: 1
-                      }}
-                    />
-                    
-                    {/* Data points */}
-                    {graphData.map((data, i) => {
-                      const xScale = chartWidth / (maxGameCount);
-                      const yScale = chartHeight / maxScore;
-                      const x = marginLeft + i * xScale;
-                      const y = svgHeight - marginBottom - (data[player] * yScale);
+                {/* Player Score Lines */}
+                {randomizedPlayers.map((player, index) => {
+                  const isVisible = visiblePlayers.includes(player);
+                  if (!isVisible) return null;
+                  
+                  const playerPath = generatePlayerPath(player);
+                  const isAnimating = index === currentPlayerIndex;
+                  const pathLength = 1000; // Approximate path length
+                  
+                  // Calculate how much of the path to show based on animation progress
+                  const dashOffset = isAnimating ? 
+                    pathLength * (1 - animationProgress / 100) : 0;
+                  
+                  return (
+                    <g key={player}>
+                      <path
+                        id={`path-${player}`}
+                        d={playerPath}
+                        fill="none"
+                        stroke={getPlayerColor(player)}
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          strokeDasharray: isAnimating ? pathLength : 'none',
+                          strokeDashoffset: dashOffset,
+                          opacity: 1
+                        }}
+                      />
                       
-                      // Only show dots up to the current animation progress for the currently animating player
-                      const gameProgress = (i + 1) / graphData.length * 100;
-                      if (isAnimating && gameProgress > animationProgress) {
-                        return null;
-                      }
-                      
-                      return (
-                        <circle
-                          key={`dot-${player}-${i}`}
-                          cx={x}
-                          cy={y}
-                          r="5"
-                          fill={getPlayerColor(player)}
-                          stroke="white"
-                          strokeWidth="2"
-                        />
-                      );
-                    })}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-
-          <div className="player-scores-list">
-            {randomizedPlayers.map((player, index) => 
-              renderPlayerScoreDisplay(player, index)
-            )}
-          </div>
-          
-          {showPlayerNames && (
-            <div className="final-actions">
-              <Button onClick={toggleAddGames}>
-                Add More Games
-              </Button>
-              
-              <Button onClick={handleStartNew} primary>
-                Start New Quadrathlon
-              </Button>
+                      {/* Data points */}
+                      {graphData.map((data, i) => {
+                        const xScale = chartWidth / (maxGameCount);
+                        const yScale = chartHeight / maxScore;
+                        const x = marginLeft + i * xScale;
+                        const y = svgHeight - marginBottom - (data[player] * yScale);
+                        
+                        // Only show dots up to the current animation progress for the currently animating player
+                        const gameProgress = (i + 1) / graphData.length * 100;
+                        if (isAnimating && gameProgress > animationProgress) {
+                          return null;
+                        }
+                        
+                        return (
+                          <circle
+                            key={`dot-${player}-${i}`}
+                            cx={x}
+                            cy={y}
+                            r="5"
+                            fill={getPlayerColor(player)}
+                            stroke="white"
+                            strokeWidth="2"
+                          />
+                        );
+                      })}
+                    </g>
+                  );
+                })}
+              </svg>
             </div>
-          )}
+
+            <div className="player-scores-list">
+              {randomizedPlayers.map((player, index) => 
+                renderPlayerScoreDisplay(player, index)
+              )}
+            </div>
+            
+            {showPlayerNames && (
+              <div className="final-actions">
+                <Button onClick={toggleAddGames}>
+                  <span className="btn-icon">➕</span>
+                  Add More Games
+                </Button>
+                
+                <Button onClick={handleStartNew} primary>
+                  <span className="btn-icon">🎮</span>
+                  Start New Quadrathlon
+                </Button>
+              </div>
+            )}
+          </Card>
         </div>
       )}
 
       <style jsx>{`
+        .final-standings {
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        
+        .results-title {
+          text-align: center;
+          background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-fill-color: transparent;
+          font-size: 2.75rem;
+          margin-bottom: var(--space-xl);
+        }
+        
+        .reveal-intro {
+          text-align: center;
+        }
+        
+        .intro-text {
+          font-size: 1.125rem;
+          margin-bottom: var(--space-xl);
+        }
+        
         .results-reveal-container {
-          padding: 20px;
-          background-color: #f8f9fa;
-          border-radius: 8px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          margin-top: var(--space-lg);
+        }
+        
+        .results-card {
+          padding: var(--space-xl);
         }
         
         .score-graph-container {
-          margin-bottom: 30px;
-          background-color: white;
-          padding: 20px;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+          margin-bottom: var(--space-xl);
+          background-color: var(--bg-color);
+          padding: var(--space-lg);
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-inner);
           overflow: hidden;
+        }
+        
+        .graph-title {
+          text-align: center;
+          margin-bottom: var(--space-md);
+          color: var(--text-primary);
         }
         
         .score-graph-svg {
@@ -622,71 +679,179 @@ const FinalStandingsReveal = () => {
         .player-scores-list {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 15px;
-          margin-top: 20px;
+          gap: var(--space-md);
+          margin-top: var(--space-xl);
         }
         
         .player-score-display {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 15px;
-          background-color: white;
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-          transition: all 0.3s ease;
+          padding: var(--space-md);
+          background-color: var(--bg-color);
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-md);
           opacity: 0.7;
+          transition: all 0.3s ease;
+          border-left: 5px solid var(--player-color, var(--primary-color));
         }
         
         .player-score-display.revealed {
           opacity: 1;
-          border-left: 5px solid var(--player-color);
+          box-shadow: var(--shadow-lg);
+          transform: translateY(-3px);
         }
         
         .player-score-display.named {
-          background-color: #f8f9fa;
-          border: 1px solid #ddd;
+          background-color: white;
+          border: 1px solid var(--border-color);
         }
         
-        .player-score-name {
+        .player-info {
           display: flex;
           align-items: center;
-          gap: 10px;
-          font-weight: 500;
+          gap: var(--space-md);
         }
         
-        .player-color-indicator {
-          width: 12px;
-          height: 12px;
+        .player-badge {
+          width: 42px;
+          height: 42px;
           border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          color: white;
+          font-size: 1.125rem;
+          box-shadow: var(--shadow-sm);
+        }
+        
+        .player-details {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2xs);
+        }
+        
+        .player-name {
+          font-weight: 600;
+          font-size: 1.125rem;
+          color: var(--text-primary);
+        }
+        
+        .player-rank {
+          font-size: 0.75rem;
+          background-color: var(--player-color);
+          color: white;
+          padding: 2px 8px;
+          border-radius: var(--radius-full);
+          display: inline-block;
+          width: fit-content;
+        }
+        
+        .score-container {
+          text-align: right;
         }
         
         .player-score-value {
           font-weight: 700;
           font-family: monospace;
-          color: var(--player-color, #333);
-          font-size: 1.1rem;
+          font-size: 1.375rem;
+          color: var(--player-color, var(--primary-color));
         }
         
-        .player-rank {
-          font-size: 0.8rem;
-          background-color: var(--player-color);
-          color: white;
-          padding: 2px 8px;
-          border-radius: 10px;
+        .score-label {
+          font-size: 0.75rem;
+          color: var(--text-tertiary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
         
         .final-actions {
           display: flex;
           justify-content: center;
-          gap: 15px;
-          margin-top: 40px;
+          gap: var(--space-lg);
+          margin-top: var(--space-xl);
         }
         
-        @keyframes pulse {
-          0% { opacity: 0.8; }
-          50% { opacity: 1; }
-          100% { opacity: 0.8; }
+        .reveal-options {
+          display: flex;
+          justify-content: center;
+          gap: var(--space-lg);
+          margin-top: var(--space-xl);
+        }
+        
+        .add-games-panel {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        
+        .games-selector {
+          margin-top: var(--space-md);
+        }
+        
+        .selector-options {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: var(--space-md);
+        }
+        
+        .selector-option {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: var(--space-md) var(--space-sm);
+          background-color: var(--bg-color);
+          border: 2px solid var(--border-color);
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: var(--transition-normal);
+        }
+        
+        .selector-option:hover {
+          transform: translateY(-3px);
+          box-shadow: var(--shadow-md);
+        }
+        
+        .selector-option.selected {
+          background-color: var(--primary-color);
+          color: white;
+          border-color: var(--primary-color);
+        }
+        
+        .option-icon {
+          font-size: 1.5rem;
+          margin-bottom: var(--space-xs);
+        }
+        
+        .extension-summary {
+          background-color: var(--bg-color);
+          padding: var(--space-md);
+          border-radius: var(--radius-md);
+          margin: var(--space-lg) 0;
+        }
+        
+        .extension-summary p {
+          margin-bottom: var(--space-xs);
+        }
+        
+        .extension-total {
+          font-weight: 600;
+          color: var(--primary-color);
+          font-size: 1.125rem;
+          padding-top: var(--space-xs);
+          margin-top: var(--space-xs);
+          border-top: 1px solid var(--border-color);
+        }
+        
+        .panel-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: var(--space-md);
+        }
+        
+        .btn-icon {
+          margin-right: var(--space-xs);
         }
         
         @media (max-width: 768px) {
@@ -694,9 +859,20 @@ const FinalStandingsReveal = () => {
             grid-template-columns: 1fr;
           }
           
-          .final-actions {
+          .final-actions,
+          .reveal-options {
             flex-direction: column;
             align-items: center;
+            gap: var(--space-md);
+          }
+          
+          .selector-options {
+            grid-template-columns: 1fr;
+          }
+          
+          .panel-actions {
+            flex-direction: column;
+            width: 100%;
           }
         }
       `}</style>

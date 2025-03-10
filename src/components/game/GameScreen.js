@@ -7,12 +7,11 @@ import CooperativeGame from './CooperativeGame';
 import TournamentGame from './TournamentGame';
 import TeamGame from './TeamGame';
 import GameHistoryList from './GameHistoryList';
-import Button from '../core/Button';
+import { Button, Card, SectionHeading, ProgressBar } from '../core/UIComponents';
 
 const GameScreen = () => {
   const { state, dispatch } = useAppState();
   const [gameName, setGameName] = useState('');
-  const [gameType, setGameType] = useState('individual');
   const [gameCreated, setGameCreated] = useState(false);
   
   // Get the current game index
@@ -24,14 +23,13 @@ const GameScreen = () => {
       state.games.length <= currentGameIndex && 
       currentGameIndex < state.session.plannedGames
     ) {
+      // New game needs to be created - reset state
       setGameCreated(false);
       setGameName(`Game ${currentGameIndex + 1}`);
-      setGameType('individual');
     } else if (state.games.length > currentGameIndex) {
       // If revisiting an existing game
       const currentGame = state.games[currentGameIndex];
       setGameName(currentGame.name);
-      setGameType(currentGame.type);
       setGameCreated(true);
     }
   }, [state.games, currentGameIndex, state.session.plannedGames]);
@@ -41,13 +39,8 @@ const GameScreen = () => {
     setGameName(e.target.value);
   };
   
-  // Handle game type selection
-  const handleTypeChange = (type) => {
-    setGameType(type);
-  };
-  
-  // Create a new game
-  const handleCreateGame = () => {
+  // Create a new game when type is selected
+  const handleTypeSelect = (type) => {
     const gameId = Date.now().toString();
     
     dispatch({
@@ -55,7 +48,7 @@ const GameScreen = () => {
       payload: {
         id: gameId,
         name: gameName,
-        type: gameType
+        type: type
       }
     });
     
@@ -102,8 +95,8 @@ const GameScreen = () => {
   
   // Render game setup form
   const renderGameSetup = () => (
-    <div className="game-setup">
-      <h2>Game Setup</h2>
+    <Card className="game-setup-card">
+      <SectionHeading>Game Setup</SectionHeading>
       
       <div className="form-group">
         <label htmlFor="game-name">Game Name</label>
@@ -118,19 +111,13 @@ const GameScreen = () => {
       </div>
       
       <div className="form-group">
-        <label>Game Type</label>
+        <label>Game Type - Click to select and start</label>
         <GameTypeSelector
-          selected={gameType}
-          onChange={handleTypeChange}
+          selected=""
+          onChange={handleTypeSelect}
         />
       </div>
-      
-      <div className="game-setup-actions">
-        <Button onClick={handleCreateGame} primary>
-          Start Game
-        </Button>
-      </div>
-    </div>
+    </Card>
   );
   
   // Render game progress indicator
@@ -140,15 +127,12 @@ const GameScreen = () => {
     
     return (
       <div className="game-progress">
-        <span className="progress-text">
-          Game {currentGame} of {totalGames}
-        </span>
-        <div className="progress-bar">
-          <div 
-            className="progress-fill"
-            style={{ width: `${(currentGame / totalGames) * 100}%` }}
-          ></div>
-        </div>
+        <ProgressBar 
+          value={currentGame}
+          max={totalGames}
+          showLabel={true}
+          label={`Game ${currentGame} of ${totalGames}`}
+        />
       </div>
     );
   };
@@ -175,14 +159,69 @@ const GameScreen = () => {
       )}
       
       {state.games.length > 0 && (
-        <div className="game-history-section">
-          <h3>Game History</h3>
+        <Card className="game-history-section">
+          <SectionHeading>Game History</SectionHeading>
           <GameHistoryList
             games={state.games}
             currentGameIndex={currentGameIndex}
           />
-        </div>
+        </Card>
       )}
+      
+      <style jsx>{`
+        .game-screen {
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        
+        .game-progress {
+          margin-bottom: var(--space-lg);
+        }
+        
+        .game-setup-card {
+          margin-bottom: var(--space-xl);
+        }
+        
+        .form-group {
+          margin-bottom: var(--space-lg);
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: var(--space-xs);
+          color: var(--text-primary);
+          font-weight: 500;
+        }
+        
+        .input-field {
+          width: 100%;
+          padding: var(--space-sm) var(--space-md);
+          border: 2px solid var(--border-color);
+          border-radius: var(--radius-md);
+          font-size: 1rem;
+          transition: var(--transition-fast);
+        }
+        
+        .input-field:focus {
+          border-color: var(--primary-color);
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.1);
+        }
+        
+        .game-header {
+          margin-bottom: var(--space-lg);
+        }
+        
+        .game-history-section {
+          margin-top: var(--space-xl);
+        }
+        
+        @media (max-width: 768px) {
+          .game-screen {
+            padding: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 };

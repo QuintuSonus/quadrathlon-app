@@ -7,6 +7,8 @@ import SessionCompleteScreen from './components/results/SessionCompleteScreen';
 import FinalStandingsReveal from './components/results/FinalStandingsReveal';
 import NavigationBar from './components/core/NavigationBar';
 import MobileResponsiveWrapper from './components/core/MobileResponsiveWrapper';
+import ThemeProvider from './components/core/ThemeProvider';
+import { PlayerCustomizationProvider } from './components/setup/PlayerDisplay';
 import audioService from './services/AudioService';
 import './styles/index.css';
 
@@ -59,14 +61,18 @@ const AppContent = () => {
   );
 };
 
-// Main App component with state provider
+// Main App component with state provider and theme provider
 const App = () => {
   return (
-    <StateProvider>
-      <MobileResponsiveWrapper>
-        <AppContent />
-      </MobileResponsiveWrapper>
-    </StateProvider>
+    <ThemeProvider>
+      <PlayerCustomizationProvider>
+        <StateProvider>
+          <MobileResponsiveWrapper>
+            <AppContent />
+          </MobileResponsiveWrapper>
+        </StateProvider>
+      </PlayerCustomizationProvider>
+    </ThemeProvider>
   );
 };
 
