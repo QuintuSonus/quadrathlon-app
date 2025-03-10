@@ -62,6 +62,24 @@ const GameScreen = () => {
     setGameCreated(true);
   };
   
+  // Go back to game setup (cancel current game creation)
+  const handleBackToSetup = () => {
+    // If we have a game at this index, we should update it rather than creating a new one
+    setGameCreated(false);
+    
+    // Get the current game ID if it exists
+    const currentGame = state.games[currentGameIndex];
+    if (currentGame) {
+      // Remove this game from state so we can recreate it with the correct type
+      dispatch({
+        type: ACTION_TYPES.DELETE_GAME,
+        payload: {
+          id: currentGame.id
+        }
+      });
+    }
+  };
+  
   // Render game component based on type
   const renderGameComponent = () => {
     const currentGame = state.games[currentGameIndex];
@@ -107,9 +125,11 @@ const GameScreen = () => {
         />
       </div>
       
-      <Button onClick={handleCreateGame} primary>
-        Start Game
-      </Button>
+      <div className="game-setup-actions">
+        <Button onClick={handleCreateGame} primary>
+          Start Game
+        </Button>
+      </div>
     </div>
   );
   
@@ -137,7 +157,22 @@ const GameScreen = () => {
     <div className="game-screen">
       {renderProgressIndicator()}
       
-      {!gameCreated ? renderGameSetup() : renderGameComponent()}
+      {!gameCreated ? (
+        renderGameSetup()
+      ) : (
+        <>
+          <div className="game-header">
+            <Button 
+              onClick={handleBackToSetup} 
+              className="back-button"
+              style={{ marginBottom: '15px' }}
+            >
+              &larr; Back to Game Setup
+            </Button>
+            {renderGameComponent()}
+          </div>
+        </>
+      )}
       
       {state.games.length > 0 && (
         <div className="game-history-section">

@@ -1,12 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AudioService from '../../services/AudioService';
 
-const CountdownTimer = ({ onSaveScore, onValueChange }) => {
+const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDurationChange }) => {
+  const firstRenderRef = useRef(true);
+  const [time, setTime] = useState(sessionDuration || 60000);
+  const [initialTime, setInitialTime] = useState(sessionDuration || 60000); // Original value for resets
   const [isRunning, setIsRunning] = useState(false);
-  const [time, setTime] = useState(60000); // Default 1 minute (60000ms)
-  const [initialTime, setInitialTime] = useState(60000);
   const lastRunningState = useRef(isRunning);
   const hasUpdatedRef = useRef(false);
+  
+  // Update time when sessionDuration changes - but only on certain conditions
+  useEffect(() => {
+    if (firstRenderRef.current) {
+      // Always set on first render
+      firstRenderRef.current = false;
+      if (sessionDuration) {
+        setTime(sessionDuration);
+        setInitialTime(sessionDuration);
+      }
+    } else if (!isRunning && sessionDuration !== undefined) {
+      // If not running and sessionDuration changes, update both time and initialTime
+      setTime(sessionDuration);
+      setInitialTime(sessionDuration);
+    }
+  }, [sessionDuration, isRunning]);
   
   // Presets in milliseconds
   const presets = [
@@ -82,9 +99,11 @@ const CountdownTimer = ({ onSaveScore, onValueChange }) => {
   };
   
   const handleReset = () => {
+    // Reset to the original initialTime value, not the current time
     setTime(initialTime);
     setIsRunning(false);
     hasUpdatedRef.current = false;
+    
     if (onValueChange) {
       onValueChange(initialTime);
     }
@@ -92,11 +111,49 @@ const CountdownTimer = ({ onSaveScore, onValueChange }) => {
   
   const handlePresetSelect = (presetValue) => {
     setTime(presetValue);
-    setInitialTime(presetValue);
+    setInitialTime(presetValue); // Update initialTime for resets
     setIsRunning(false);
     hasUpdatedRef.current = false;
+    
+    // Inform parent component about the new duration
+    if (onDurationChange) {
+      onDurationChange(presetValue);
+    }
+    
     if (onValueChange) {
       onValueChange(presetValue);
+    }
+  };
+  
+  // Functions for time adjustment
+  const handleIncreaseTime = () => {
+    const newTime = time + 30000; // Add 30 seconds
+    setTime(newTime);
+    setInitialTime(newTime); // Update initialTime for resets
+    
+    // Inform parent component about the new duration
+    if (onDurationChange) {
+      onDurationChange(newTime);
+    }
+    
+    if (onValueChange && !isRunning) {
+      onValueChange(newTime);
+    }
+  };
+  
+  const handleDecreaseTime = () => {
+    // Ensure we don't go below 5 seconds
+    const newTime = Math.max(5000, time - 30000); // Subtract 30 seconds
+    setTime(newTime);
+    setInitialTime(newTime); // Update initialTime for resets
+    
+    // Inform parent component about the new duration
+    if (onDurationChange) {
+      onDurationChange(newTime);
+    }
+    
+    if (onValueChange && !isRunning) {
+      onValueChange(newTime);
     }
   };
   
@@ -140,8 +197,24 @@ const CountdownTimer = ({ onSaveScore, onValueChange }) => {
         ))}
       </div>
       
-      <div className="score-display">
-        {formatTime()}
+      <div className="fine-adjustment">
+        <button 
+          className="btn adjust-btn" 
+          onClick={handleDecreaseTime}
+          disabled={isRunning}
+        >
+          -30s
+        </button>
+        <div className="score-display">
+          {formatTime()}
+        </div>
+        <button 
+          className="btn adjust-btn" 
+          onClick={handleIncreaseTime}
+          disabled={isRunning}
+        >
+          +30s
+        </button>
       </div>
       
       <div className="tool-controls">
@@ -153,6 +226,27 @@ const CountdownTimer = ({ onSaveScore, onValueChange }) => {
         <button className="btn" onClick={handleReset}>Reset</button>
         <button className="btn btn-primary" onClick={handleSave}>Save</button>
       </div>
+      
+      <style jsx>{`
+        .fine-adjustment {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+          margin: 15px 0;
+        }
+        
+        .adjust-btn {
+          font-size: 0.9rem;
+          padding: 5px 10px;
+          background-color: #f0f0f0;
+        }
+        
+        .adjust-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 };

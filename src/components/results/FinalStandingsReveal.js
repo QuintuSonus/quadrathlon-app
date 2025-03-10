@@ -3,6 +3,7 @@ import { useAppState } from '../../context/StateContext';
 import { ACTION_TYPES } from '../../context/StateReducer';
 import Button from '../core/Button';
 import AudioService from '../../services/AudioService';
+import GameHistoryList from '../game/GameHistoryList';
 
 const FinalStandingsReveal = () => {
   const { state, dispatch } = useAppState();
@@ -433,6 +434,15 @@ const FinalStandingsReveal = () => {
       ) : revealState === 'initial' ? (
         <div className="reveal-intro">
           <p>The moment of truth has arrived! See who won the Quadrathlon!</p>
+          
+          <div className="game-history-section">
+            <h3>Game History</h3>
+            <p>Review and edit game results before the final reveal:</p>
+            <GameHistoryList
+              games={state.games}
+              currentGameIndex={state.games.length - 1}
+            />
+          </div>
           
           <div className="reveal-options">
             <Button onClick={toggleAddGames}>

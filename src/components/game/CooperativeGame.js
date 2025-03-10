@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppState } from '../../context/StateContext';
 import { ACTION_TYPES } from '../../context/StateReducer';
 import Button from '../core/Button';
@@ -21,6 +21,17 @@ const CooperativeGame = ({ game }) => {
   const [winningTeam, setWinningTeam] = useState(null);
   const [currentStep, setCurrentStep] = useState(!teams.length ? 'setup' : 'play');
   
+  // Add state for persistent timer configuration
+  const [sessionCountdownDuration, setSessionCountdownDuration] = useState(60000);
+  
+  // Keep track of tool values across teams
+  const [persistentToolValues, setPersistentToolValues] = useState({
+    countdown: 60000,
+    stopwatch: 0,
+    counter: 0,
+    manual: 0
+  });
+  
   // Get all players from state
   const allPlayers = state.session.players;
   
@@ -29,6 +40,23 @@ const CooperativeGame = ({ game }) => {
     setToolScores(prev => ({
       ...prev,
       [tool]: value
+    }));
+    
+    // Also update the persistent values when tools change
+    if (tool === 'countdown') {
+      setPersistentToolValues(prev => ({
+        ...prev,
+        countdown: value
+      }));
+    }
+  };
+  
+  // New function to handle countdown duration changes
+  const handleCountdownDurationChange = (duration) => {
+    setSessionCountdownDuration(duration);
+    setPersistentToolValues(prev => ({
+      ...prev,
+      countdown: duration
     }));
   };
   
@@ -127,19 +155,13 @@ const CooperativeGame = ({ game }) => {
     });
     
     // Reset for next team or move to selecting the winner
-    setToolScores({});
-    
     if (currentTeamIndex === 0) {
+      // Save current tool values first, so they're preserved when switching teams
+      const currentToolScores = { ...toolScores };
       setCurrentTeamIndex(1);
       
-      // Force reset of all scoring tools
-      const scoringTools = document.querySelectorAll('.scoring-tool');
-      scoringTools.forEach(tool => {
-        const resetButton = tool.querySelector('button:nth-child(2)');
-        if (resetButton) {
-          resetButton.click();
-        }
-      });
+      // Keep tool scores in persistent state but clear the current team's scores
+      setToolScores({});
     } else {
       setCurrentStep('results');
     }
@@ -256,6 +278,7 @@ const CooperativeGame = ({ game }) => {
         <div className="scoring-tools">
           {activeScoreTools.includes('stopwatch') && (
             <StopwatchTool
+              key="stopwatch-stable"
               onSaveScore={(score) => handleToolValueUpdate('stopwatch', score)}
               onValueChange={(value) => handleToolValueUpdate('stopwatch', value)}
             />
@@ -263,13 +286,17 @@ const CooperativeGame = ({ game }) => {
           
           {activeScoreTools.includes('countdown') && (
             <CountdownTimer
+              key="countdown-stable" // Use a stable key to prevent recreation
               onSaveScore={(score) => handleToolValueUpdate('countdown', score)}
               onValueChange={(value) => handleToolValueUpdate('countdown', value)}
+              sessionDuration={toolScores.countdown || persistentToolValues.countdown} // Use existing value if available
+              onDurationChange={handleCountdownDurationChange}
             />
           )}
           
           {activeScoreTools.includes('counter') && (
             <CounterTool
+              key="counter-stable"
               onSaveScore={(score) => handleToolValueUpdate('counter', score)}
               onValueChange={(value) => handleToolValueUpdate('counter', value)}
             />
@@ -277,6 +304,7 @@ const CooperativeGame = ({ game }) => {
           
           {activeScoreTools.includes('manual') && (
             <ManualScoreInput
+              key="manual-stable"
               onSaveScore={(score) => handleToolValueUpdate('manual', score)}
               onValueChange={(value) => handleToolValueUpdate('manual', value)}
             />

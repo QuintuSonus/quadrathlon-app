@@ -87,7 +87,7 @@ const stateReducer = (state, action) => {
     // Game actions
     case ACTION_TYPES.CREATE_GAME:
       const newGame = {
-        id: Date.now().toString(),
+        id: action.payload.id,
         name: action.payload.name,
         type: action.payload.type,
         playerOrder: action.payload.playerOrder || [],
@@ -115,9 +115,24 @@ const stateReducer = (state, action) => {
       };
       
     case ACTION_TYPES.DELETE_GAME:
+      // Filter out the game with the specified ID
+      const filteredGames = state.games.filter(game => game.id !== action.payload.id);
+      
+      // If we deleted the current game, we need to recalculate player scores
+      const deletedGame = state.games.find(game => game.id === action.payload.id);
+      let updatedPlayerScores = { ...state.playerScores };
+      
+      if (deletedGame && deletedGame.points) {
+        // Subtract the points from this game from player scores
+        Object.entries(deletedGame.points).forEach(([player, points]) => {
+          updatedPlayerScores[player] = (updatedPlayerScores[player] || 0) - points;
+        });
+      }
+      
       return {
         ...state,
-        games: state.games.filter(game => game.id !== action.payload.id)
+        games: filteredGames,
+        playerScores: updatedPlayerScores
       };
       
     case ACTION_TYPES.NEXT_GAME:

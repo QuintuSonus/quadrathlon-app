@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../../context/StateContext';
 import { ACTION_TYPES } from '../../context/StateReducer';
 import PlayerDisplay from '../setup/PlayerDisplay';
@@ -12,6 +12,9 @@ import RandomizationService from '../../services/RandomizationService';
 import AudioService from '../../services/AudioService';
 
 const IndividualGame = ({ game }) => {
+  console.log("IndividualGame rendered, game:", game.id);
+  const componentIdRef = useRef(Math.random().toString(36).substr(2, 9)); // Unique ID
+  
   const { state, dispatch } = useAppState();
   const [currentStep, setCurrentStep] = useState('play'); // 'play', 'rank'
   const [playerOrder, setPlayerOrder] = useState(game.playerOrder || []);
@@ -24,6 +27,27 @@ const IndividualGame = ({ game }) => {
   const [rankings, setRankings] = useState(game.rankings || []);
   const [toolScores, setToolScores] = useState({});
   
+  // Add state for persistent timer configuration
+  const [sessionCountdownDuration, setSessionCountdownDuration] = useState(60000);
+  
+  // Log component lifecycle
+  useEffect(() => {
+    console.log(`[IndGame ${componentIdRef.current}] Component mounted`);
+    return () => {
+      console.log(`[IndGame ${componentIdRef.current}] Component unmounted`);
+    };
+  }, []);
+  
+  // Track player changes
+  useEffect(() => {
+    console.log(`[IndGame ${componentIdRef.current}] selectedPlayer changed to:`, selectedPlayer);
+  }, [selectedPlayer]);
+  
+  // Track tool scores
+  useEffect(() => {
+    console.log(`[IndGame ${componentIdRef.current}] toolScores:`, toolScores);
+  }, [toolScores]);
+  
   // Get all players from state
   const allPlayers = state.session.players;
   
@@ -32,20 +56,29 @@ const IndividualGame = ({ game }) => {
   
   // This is the function that was missing - it handles real-time score updates
   const handleToolValueUpdate = (tool, value) => {
-    setToolScores(prev => ({
-      ...prev,
-      [tool]: value
-    }));
+    console.log(`[IndGame ${componentIdRef.current}] Tool value update - ${tool}:`, value);
+    setToolScores(prev => {
+      const newScores = {
+        ...prev,
+        [tool]: value
+      };
+      console.log(`[IndGame ${componentIdRef.current}] Updated toolScores:`, newScores);
+      return newScores;
+    });
+  };
+  
+  // New function to handle countdown duration changes
+  const handleCountdownDurationChange = (duration) => {
+    console.log(`[IndGame ${componentIdRef.current}] Countdown duration changed to:`, duration);
+    setSessionCountdownDuration(duration);
   };
   
   // Handle random player selection
   const handleRandomizePlayer = () => {
     if (isSelecting || availablePlayers.length === 0) return;
     
+    console.log(`[IndGame ${componentIdRef.current}] Starting player randomization`);
     setIsSelecting(true);
-    
-    // Reset scoring tools for the new player
-    setToolScores({});
     
     // Start the selection animation
     let counter = 0;
@@ -68,6 +101,7 @@ const IndividualGame = ({ game }) => {
         availablePlayers
       );
       
+      console.log(`[IndGame ${componentIdRef.current}] Selected player:`, finalPlayer);
       setSelectedPlayer(finalPlayer);
       
       // Play final selection sound
@@ -92,6 +126,10 @@ const IndividualGame = ({ game }) => {
       });
       
       setIsSelecting(false);
+      
+      // Reset tool scores for new player
+      console.log(`[IndGame ${componentIdRef.current}] Resetting tool scores for new player`);
+      setToolScores({});
     }, 2000);
   };
   
@@ -99,12 +137,16 @@ const IndividualGame = ({ game }) => {
   const handleSavePlayerScore = () => {
     if (!selectedPlayer) return;
     
+    console.log(`[IndGame ${componentIdRef.current}] Saving scores for player:`, selectedPlayer);
+    console.log(`[IndGame ${componentIdRef.current}] Current tool scores:`, toolScores);
+    
     // Save scores for the current player
     const newScores = {
       ...playerScores,
       [selectedPlayer]: toolScores
     };
     
+    console.log(`[IndGame ${componentIdRef.current}] Updated player scores:`, newScores);
     setPlayerScores(newScores);
     setPlayedPlayers([...playedPlayers, selectedPlayer]);
     
@@ -119,18 +161,21 @@ const IndividualGame = ({ game }) => {
       }
     });
     
+    console.log(`[IndGame ${componentIdRef.current}] Reset for next player`);
     // Reset for next player
     setSelectedPlayer(null);
     setToolScores({});
     
     // If all players have played, move to ranking
     if (playedPlayers.length + 1 >= allPlayers.length) {
+      console.log(`[IndGame ${componentIdRef.current}] All players have played, moving to ranking`);
       setCurrentStep('rank');
     }
   };
   
   // Handle active scoring tool selection
   const handleScoreToolChange = (tools) => {
+    console.log(`[IndGame ${componentIdRef.current}] Score tools changed to:`, tools);
     setActiveScoreTools(tools);
     
     // Update the game in state
@@ -158,12 +203,16 @@ const IndividualGame = ({ game }) => {
     // Only allow ranking if the player isn't already ranked
     if (rankings.includes(player)) return;
     
+    console.log(`[IndGame ${componentIdRef.current}] Ranking player:`, player);
+    
     // Add the player to the next ranking position
     const newRankings = [...rankings, player];
     setRankings(newRankings);
     
     // If all players are ranked, update game and prepare to save
     if (newRankings.length === allPlayers.length) {
+      console.log(`[IndGame ${componentIdRef.current}] All players ranked`);
+      
       // Calculate points based on rankings
       const points = {
         [newRankings[0]]: 4000, // 1st place
@@ -188,12 +237,15 @@ const IndividualGame = ({ game }) => {
   
   // Clear all rankings to start over
   const handleClearRankings = () => {
+    console.log(`[IndGame ${componentIdRef.current}] Clearing rankings`);
     setRankings([]);
   };
   
   // Save rankings and proceed to next game
   const handleSaveRankings = () => {
     if (rankings.length !== allPlayers.length) return;
+    
+    console.log(`[IndGame ${componentIdRef.current}] Saving rankings and proceeding to next game`);
     
     // Calculate points based on rankings
     const points = {
@@ -233,97 +285,104 @@ const IndividualGame = ({ game }) => {
   };
   
   // Render player selection and scoring
-  const renderPlayerSelection = () => (
-    <div className="player-selection-scoring">
-      <div className="player-selection">
-        <h2>Player Selection</h2>
-        
-        <div className="played-status">
-          <div className="played-label">Already played:</div>
-          <div className="played-players">
-            {playedPlayers.map(player => (
-              <span key={player} className="played-player">{player}</span>
-            ))}
+  const renderPlayerSelection = () => {
+    console.log(`[IndGame ${componentIdRef.current}] Rendering player selection, selectedPlayer:`, selectedPlayer);
+    
+    return (
+      <div className="player-selection-scoring">
+        <div className="player-selection">
+          <h2>Player Selection</h2>
+          
+          <div className="played-status">
+            <div className="played-label">Already played:</div>
+            <div className="played-players">
+              {playedPlayers.map(player => (
+                <span key={player} className="played-player">{player}</span>
+              ))}
+            </div>
           </div>
+          
+          {selectedPlayer ? (
+            <div className="current-player">
+              <h3>Current Player: {selectedPlayer}</h3>
+              <PlayerDisplay
+                players={[selectedPlayer]}
+                highlightedPlayer={selectedPlayer}
+              />
+            </div>
+          ) : (
+            <div className="player-selection-controls">
+              <Button
+                onClick={handleRandomizePlayer}
+                primary
+                disabled={isSelecting || availablePlayers.length === 0}
+              >
+                {isSelecting ? 'Selecting...' : 'Randomize Next Player'}
+              </Button>
+              
+              {availablePlayers.length === 0 && (
+                <p>All players have played. Proceed to ranking.</p>
+              )}
+            </div>
+          )}
         </div>
         
-        {selectedPlayer ? (
-          <div className="current-player">
-            <h3>Current Player</h3>
-            <PlayerDisplay
-              players={[selectedPlayer]}
-              highlightedPlayer={selectedPlayer}
-            />
-          </div>
-        ) : (
-          <div className="player-selection-controls">
-            <Button
-              onClick={handleRandomizePlayer}
-              primary
-              disabled={isSelecting || availablePlayers.length === 0}
-            >
-              {isSelecting ? 'Selecting...' : 'Randomize Next Player'}
-            </Button>
+        {selectedPlayer && (
+          <div className="player-scoring">
+            <div className="scoring-method-selection">
+              <h3>Scoring Methods</h3>
+              <ScoringMethodSelector
+                selected={activeScoreTools}
+                onChange={handleScoreToolChange}
+              />
+            </div>
             
-            {availablePlayers.length === 0 && (
-              <p>All players have played. Proceed to ranking.</p>
-            )}
+            <div className="scoring-tools">
+              {activeScoreTools.includes('stopwatch') && (
+                <StopwatchTool
+                  onSaveScore={(score) => handleToolValueUpdate('stopwatch', score)}
+                  onValueChange={(value) => handleToolValueUpdate('stopwatch', value)}
+                />
+              )}
+              
+              {activeScoreTools.includes('countdown') && (
+  <CountdownTimer
+    key="countdown-stable" // Use a stable key to prevent recreation
+    onSaveScore={(score) => handleToolValueUpdate('countdown', score)}
+    onValueChange={(value) => handleToolValueUpdate('countdown', value)}
+    sessionDuration={toolScores.countdown || sessionCountdownDuration} // Use existing value if available
+    onDurationChange={handleCountdownDurationChange}
+  />
+)}
+              
+              {activeScoreTools.includes('counter') && (
+                <CounterTool
+                  onSaveScore={(score) => handleToolValueUpdate('counter', score)}
+                  onValueChange={(value) => handleToolValueUpdate('counter', value)}
+                />
+              )}
+              
+              {activeScoreTools.includes('manual') && (
+                <ManualScoreInput
+                  onSaveScore={(score) => handleToolValueUpdate('manual', score)}
+                  onValueChange={(value) => handleToolValueUpdate('manual', value)}
+                />
+              )}
+            </div>
+            
+            <div className="save-scores">
+              <Button
+                onClick={handleSavePlayerScore}
+                primary
+              >
+                Save & Next Player
+              </Button>
+            </div>
           </div>
         )}
       </div>
-      
-      {selectedPlayer && (
-        <div className="player-scoring">
-          <div className="scoring-method-selection">
-            <h3>Scoring Methods</h3>
-            <ScoringMethodSelector
-              selected={activeScoreTools}
-              onChange={handleScoreToolChange}
-            />
-          </div>
-          
-          <div className="scoring-tools">
-            {activeScoreTools.includes('stopwatch') && (
-              <StopwatchTool
-                onSaveScore={(score) => handleToolValueUpdate('stopwatch', score)}
-                onValueChange={(value) => handleToolValueUpdate('stopwatch', value)}
-              />
-            )}
-            
-            {activeScoreTools.includes('countdown') && (
-              <CountdownTimer
-                onSaveScore={(score) => handleToolValueUpdate('countdown', score)}
-                onValueChange={(value) => handleToolValueUpdate('countdown', value)}
-              />
-            )}
-            
-            {activeScoreTools.includes('counter') && (
-              <CounterTool
-                onSaveScore={(score) => handleToolValueUpdate('counter', score)}
-                onValueChange={(value) => handleToolValueUpdate('counter', value)}
-              />
-            )}
-            
-            {activeScoreTools.includes('manual') && (
-              <ManualScoreInput
-                onSaveScore={(score) => handleToolValueUpdate('manual', score)}
-                onValueChange={(value) => handleToolValueUpdate('manual', value)}
-              />
-            )}
-          </div>
-          
-          <div className="save-scores">
-            <Button
-              onClick={handleSavePlayerScore}
-              primary
-            >
-              Save & Next Player
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
   
   // Render the ranking step with score recap
   const renderRankingStep = () => (
@@ -408,7 +467,7 @@ const IndividualGame = ({ game }) => {
   
   return (
     <div className="individual-game">
-      <h1>{game.name}</h1>
+      <h1>{game.name} (ID: {componentIdRef.current.substring(0, 4)})</h1>
       
       {currentStep === 'play' ? renderPlayerSelection() : renderRankingStep()}
       
