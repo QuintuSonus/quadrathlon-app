@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/quadrathlon-app/static/css/main.45993381.css",
-    "main.js": "/quadrathlon-app/static/js/main.099a63b5.js",
+    "main.js": "/quadrathlon-app/static/js/main.288a87a5.js",
     "index.html": "/quadrathlon-app/index.html",
     "main.45993381.css.map": "/quadrathlon-app/static/css/main.45993381.css.map",
-    "main.099a63b5.js.map": "/quadrathlon-app/static/js/main.099a63b5.js.map"
+    "main.288a87a5.js.map": "/quadrathlon-app/static/js/main.288a87a5.js.map"
   },
   "entrypoints": [
     "static/css/main.45993381.css",
-    "static/js/main.099a63b5.js"
+    "static/js/main.288a87a5.js"
   ]
 }
