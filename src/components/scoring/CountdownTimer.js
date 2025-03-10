@@ -2,15 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import AudioService from '../../services/AudioService';
 
 const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDurationChange }) => {
+  const componentIdRef = useRef(`countdown-${Date.now().toString().slice(-6)}`);
   const firstRenderRef = useRef(true);
   const [time, setTime] = useState(sessionDuration || 60000);
   const [initialTime, setInitialTime] = useState(sessionDuration || 60000); // Original value for resets
   const [isRunning, setIsRunning] = useState(false);
   const lastRunningState = useRef(isRunning);
   const hasUpdatedRef = useRef(false);
+  const lastSessionDurationRef = useRef(sessionDuration);
   
-  // Update time when sessionDuration changes - but only on certain conditions
+  // Update time when sessionDuration changes - but only if it ACTUALLY changes
   useEffect(() => {
+    // Check if sessionDuration actually changed from last render
+    const durationChanged = sessionDuration !== lastSessionDurationRef.current;
+    
+    // Store the current value for the next comparison
+    lastSessionDurationRef.current = sessionDuration;
+    
+    // If it's the first render or if the duration actually changed and we're not running
     if (firstRenderRef.current) {
       // Always set on first render
       firstRenderRef.current = false;
@@ -18,8 +27,8 @@ const CountdownTimer = ({ onSaveScore, onValueChange, sessionDuration, onDuratio
         setTime(sessionDuration);
         setInitialTime(sessionDuration);
       }
-    } else if (!isRunning && sessionDuration !== undefined) {
-      // If not running and sessionDuration changes, update both time and initialTime
+    } else if (durationChanged && !isRunning && sessionDuration !== undefined) {
+      // Only update if the sessionDuration actually changed AND we're not running
       setTime(sessionDuration);
       setInitialTime(sessionDuration);
     }

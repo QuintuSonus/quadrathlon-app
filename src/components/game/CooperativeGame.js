@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../../context/StateContext';
 import { ACTION_TYPES } from '../../context/StateReducer';
 import Button from '../core/Button';
@@ -11,6 +11,9 @@ import RandomizationService from '../../services/RandomizationService';
 import AudioService from '../../services/AudioService';
 
 const CooperativeGame = ({ game }) => {
+  console.log('CooperativeGame render, game:', game.id);
+  const componentIdRef = useRef(`coop-${Date.now().toString().slice(-6)}`);
+
   const { state, dispatch } = useAppState();
   const [teams, setTeams] = useState(game.teams || []);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -21,43 +24,49 @@ const CooperativeGame = ({ game }) => {
   const [winningTeam, setWinningTeam] = useState(null);
   const [currentStep, setCurrentStep] = useState(!teams.length ? 'setup' : 'play');
   
+  // Add a dedicated key for each scoring tool to force remount when needed
+  const stopwatchKeyRef = useRef(`stopwatch-${Date.now()}`);
+  const countdownKeyRef = useRef(`countdown-${Date.now()}`);
+  const counterKeyRef = useRef(`counter-${Date.now()}`);
+  const manualKeyRef = useRef(`manual-${Date.now()}`);
+  
   // Add state for persistent timer configuration
   const [sessionCountdownDuration, setSessionCountdownDuration] = useState(60000);
   
-  // Keep track of tool values across teams
-  const [persistentToolValues, setPersistentToolValues] = useState({
-    countdown: 60000,
-    stopwatch: 0,
-    counter: 0,
-    manual: 0
-  });
+  // Log mounting and key generation for debugging
+  useEffect(() => {
+    console.log(`[CoopGame ${componentIdRef.current}] Component mounted`);
+    console.log(`[CoopGame ${componentIdRef.current}] Initial keys:`, {
+      stopwatch: stopwatchKeyRef.current,
+      countdown: countdownKeyRef.current,
+      counter: counterKeyRef.current,
+      manual: manualKeyRef.current
+    });
+    return () => {
+      console.log(`[CoopGame ${componentIdRef.current}] Component unmounted`);
+    };
+  }, []);
   
   // Get all players from state
   const allPlayers = state.session.players;
   
   // This is the function that was missing - it handles real-time score updates
   const handleToolValueUpdate = (tool, value) => {
-    setToolScores(prev => ({
-      ...prev,
-      [tool]: value
-    }));
-    
-    // Also update the persistent values when tools change
-    if (tool === 'countdown') {
-      setPersistentToolValues(prev => ({
+    console.log(`[CoopGame ${componentIdRef.current}] Tool value update - ${tool}:`, value);
+    setToolScores(prev => {
+      const newScores = {
         ...prev,
-        countdown: value
-      }));
-    }
+        [tool]: value
+      };
+      console.log(`[CoopGame ${componentIdRef.current}] Updated toolScores:`, newScores);
+      return newScores;
+    });
   };
   
   // New function to handle countdown duration changes
   const handleCountdownDurationChange = (duration) => {
+    console.log(`[CoopGame ${componentIdRef.current}] Countdown duration changed to:`, duration);
     setSessionCountdownDuration(duration);
-    setPersistentToolValues(prev => ({
-      ...prev,
-      countdown: duration
-    }));
   };
   
   // Handle team generation
@@ -108,6 +117,7 @@ const CooperativeGame = ({ game }) => {
   
   // Handle active scoring tool selection
   const handleScoreToolChange = (tools) => {
+    console.log(`[CoopGame ${componentIdRef.current}] Score tools changed to:`, tools);
     setActiveScoreTools(tools);
     
     // Update the game in state
@@ -134,6 +144,7 @@ const CooperativeGame = ({ game }) => {
   const handleSaveTeamScore = () => {
     // Create a unique key for the team
     const teamKey = `team${currentTeamIndex}`;
+    console.log(`[CoopGame ${componentIdRef.current}] Saving scores for team ${currentTeamIndex}:`, toolScores);
     
     // Save scores for the team
     const newScores = {
@@ -156,13 +167,34 @@ const CooperativeGame = ({ game }) => {
     
     // Reset for next team or move to selecting the winner
     if (currentTeamIndex === 0) {
-      // Save current tool values first, so they're preserved when switching teams
-      const currentToolScores = { ...toolScores };
+      console.log(`[CoopGame ${componentIdRef.current}] Switching to team 2`);
+      console.log(`[CoopGame ${componentIdRef.current}] Current sessionCountdownDuration:`, sessionCountdownDuration);
+    
       setCurrentTeamIndex(1);
       
-      // Keep tool scores in persistent state but clear the current team's scores
+      // Clear the current team's scores
+      console.log(`[CoopGame ${componentIdRef.current}] Clearing toolScores`);
       setToolScores({});
+      
+      // Generate new keys for all scoring tools to force them to remount
+      const newStopwatchKey = `stopwatch-${Date.now()}`;
+      const newCountdownKey = `countdown-${Date.now()}`;
+      const newCounterKey = `counter-${Date.now()}`;
+      const newManualKey = `manual-${Date.now()}`;
+      
+      stopwatchKeyRef.current = newStopwatchKey;
+      countdownKeyRef.current = newCountdownKey;
+      counterKeyRef.current = newCounterKey;
+      manualKeyRef.current = newManualKey;
+      
+      console.log(`[CoopGame ${componentIdRef.current}] Generated new keys:`, {
+        stopwatch: newStopwatchKey,
+        countdown: newCountdownKey,
+        counter: newCounterKey,
+        manual: newManualKey
+      });
     } else {
+      console.log(`[CoopGame ${componentIdRef.current}] Moving to results step`);
       setCurrentStep('results');
     }
   };
@@ -257,7 +289,7 @@ const CooperativeGame = ({ game }) => {
     
     return (
       <div className="team-play">
-        <h2>Team {currentTeamIndex + 1}</h2>
+        <h2>Team {currentTeamIndex + 1} (Game ID: {componentIdRef.current.slice(-4)})</h2>
         
         <div className="current-team">
           <div className="team-players">
@@ -278,7 +310,7 @@ const CooperativeGame = ({ game }) => {
         <div className="scoring-tools">
           {activeScoreTools.includes('stopwatch') && (
             <StopwatchTool
-              key="stopwatch-stable"
+              key={stopwatchKeyRef.current}
               onSaveScore={(score) => handleToolValueUpdate('stopwatch', score)}
               onValueChange={(value) => handleToolValueUpdate('stopwatch', value)}
             />
@@ -286,17 +318,17 @@ const CooperativeGame = ({ game }) => {
           
           {activeScoreTools.includes('countdown') && (
             <CountdownTimer
-              key="countdown-stable" // Use a stable key to prevent recreation
+              key={countdownKeyRef.current}
               onSaveScore={(score) => handleToolValueUpdate('countdown', score)}
               onValueChange={(value) => handleToolValueUpdate('countdown', value)}
-              sessionDuration={toolScores.countdown || persistentToolValues.countdown} // Use existing value if available
+              sessionDuration={sessionCountdownDuration}
               onDurationChange={handleCountdownDurationChange}
             />
           )}
           
           {activeScoreTools.includes('counter') && (
             <CounterTool
-              key="counter-stable"
+              key={counterKeyRef.current}
               onSaveScore={(score) => handleToolValueUpdate('counter', score)}
               onValueChange={(value) => handleToolValueUpdate('counter', value)}
             />
@@ -304,7 +336,7 @@ const CooperativeGame = ({ game }) => {
           
           {activeScoreTools.includes('manual') && (
             <ManualScoreInput
-              key="manual-stable"
+              key={manualKeyRef.current}
               onSaveScore={(score) => handleToolValueUpdate('manual', score)}
               onValueChange={(value) => handleToolValueUpdate('manual', value)}
             />
@@ -322,7 +354,7 @@ const CooperativeGame = ({ game }) => {
       </div>
     );
   };
-  
+
   // Render results and winner selection
   const renderResults = () => (
     <div className="team-results">
